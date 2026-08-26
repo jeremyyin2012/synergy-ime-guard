@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate shell scripts
+        run: bash -n scripts/*.sh
+      - name: Test
+        run: swift test
+      - name: Build universal release archive
+        run: ./scripts/build-release.sh
+      - name: Verify architectures
+        run: |
+          binary="dist/synergy-ime-guard-v$(cat VERSION)-macos-universal/synergy-ime-guard"
+          test "$(lipo -archs "$binary")" = "x86_64 arm64"

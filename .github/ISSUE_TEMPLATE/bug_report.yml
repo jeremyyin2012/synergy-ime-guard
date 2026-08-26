@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a reproducible Synergy IME Guard problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach Synergy certificates, databases, fingerprints, account data, typed text, or unredacted logs.
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "For example: 26.5.2"
+    validations:
+      required: true
+  - type: input
+    id: synergy
+    attributes:
+      label: Synergy version
+      placeholder: "For example: 3.6.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: This Mac's Synergy role
+      options:
+        - Server
+        - Client
+        - Role changes during use
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: input_sources
+    attributes:
+      label: Input source identifiers
+      description: Include identifiers only, never typed content.
+      placeholder: "com.apple.inputmethod.SCIM.ITABC and com.apple.keylayout.ABC"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: Explain the screen transitions and expected/actual result.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted status output
+      description: Remove screen names and any path components you consider private.
+      render: shell
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed certificates, fingerprints, account data, typed text, and other secrets.
+          required: true

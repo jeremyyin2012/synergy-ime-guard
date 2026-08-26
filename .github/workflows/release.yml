@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify tag matches VERSION
+        run: test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
+      - name: Test
+        run: swift test
+      - name: Build release archive
+        run: ./scripts/build-release.sh
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          body_path: docs/releases/v0.1.0.md
+          files: |
+            dist/synergy-ime-guard-v*-macos-universal.tar.gz
+            dist/synergy-ime-guard-v*-macos-universal.tar.gz.sha256

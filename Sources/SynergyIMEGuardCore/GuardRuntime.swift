@@ -13,6 +13,7 @@ public final class GuardRuntime {
     private let sleep: (TimeInterval) -> Void
     private let stopLock = NSLock()
     private var stopRequested = false
+    private var reconciliationPending = false
 
     public init(
         logURL: URL,
@@ -49,8 +50,14 @@ public final class GuardRuntime {
             logURL: logURL,
             localScreenName: screenName
         )
-        if processDiscovery.serverRunning(screenName: screenName),
-           !processDiscovery.syncLanguageEnabled(),
+        guard let processState = currentProcessState() else {
+            reconciliationPending = true
+            emit("startup action=defer reason=process_snapshot_failed")
+            return
+        }
+        reconciliationPending = false
+        if processState.serverRunning,
+           !processState.syncLanguageEnabled,
            location == .remote {
             emit("startup state=remote")
             stateMachine.leaveLocal()
@@ -63,10 +70,21 @@ public final class GuardRuntime {
     public func process(line: String) {
         switch parser.parse(line: line, localScreenName: screenName) {
         case .leftLocal:
-            if processDiscovery.serverRunning(screenName: screenName),
-               !processDiscovery.syncLanguageEnabled() {
-                stateMachine.leaveLocal()
+            guard let processState = currentProcessState() else {
+                reconciliationPending = true
+                emit("leave action=skip reason=process_snapshot_failed")
+                return
             }
+            reconciliationPending = false
+            guard processState.serverRunning else {
+                emit("leave action=skip reason=not_server")
+                return
+            }
+            guard !processState.syncLanguageEnabled else {
+                emit("leave action=skip reason=sync_language")
+                return
+            }
+            stateMachine.leaveLocal()
         case .enteredLocal, .serverStarted, .serverStopped:
             stateMachine.enterLocal()
         default:
@@ -75,11 +93,35 @@ public final class GuardRuntime {
     }
 
     public func healthCheck() {
-        if stateMachine.savedInputSourceID() != nil,
-           (!processDiscovery.serverRunning(screenName: screenName)
-               || processDiscovery.syncLanguageEnabled()) {
+        guard stateMachine.savedInputSourceID() != nil else { return }
+        guard let processState = currentProcessState() else {
+            reconciliationPending = true
+            emit("health action=defer reason=process_snapshot_failed")
+            return
+        }
+        reconciliationPending = false
+        if !processState.serverRunning {
+            emit("health restore reason=server_missing")
+            stateMachine.enterLocal()
+        } else if processState.syncLanguageEnabled {
+            emit("health restore reason=sync_language")
             stateMachine.enterLocal()
         }
+    }
+
+    private func currentProcessState() -> (
+        serverRunning: Bool,
+        syncLanguageEnabled: Bool
+    )? {
+        let snapshot = processDiscovery.processSnapshot()
+        guard snapshot.isAvailable else { return nil }
+        let cores = snapshot.cores
+        return (
+            serverRunning: cores.contains {
+                $0.role == "server" && $0.screenName == screenName
+            },
+            syncLanguageEnabled: cores.contains { $0.syncLanguage }
+        )
     }
 
     public func run() {
@@ -133,7 +175,11 @@ public final class GuardRuntime {
     private func healthCheckIfDue(nextHealth: inout TimeInterval) {
         let now = ProcessInfo.processInfo.systemUptime
         guard now >= nextHealth else { return }
-        healthCheck()
+        if reconciliationPending {
+            reconcileStartup()
+        } else {
+            healthCheck()
+        }
         nextHealth = now + healthInterval
     }
 

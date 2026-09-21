@@ -47,8 +47,31 @@ final class MockProcessDiscovery: ProcessDiscovering {
     var processes: [CoreProcess] = []
     var serverIsRunning = false
     var syncEnabled = false
+    var snapshotAvailable = true
+    var coreSnapshotCount = 0
 
-    func cores() -> [CoreProcess] { processes }
+    func processSnapshot() -> CoreProcessSnapshot {
+        coreSnapshotCount += 1
+        guard snapshotAvailable else {
+            return CoreProcessSnapshot(cores: [], isAvailable: false)
+        }
+        let cores: [CoreProcess]
+        if !processes.isEmpty {
+            cores = processes
+        } else if serverIsRunning {
+            cores = [
+                CoreProcess(
+                    role: "server",
+                    screenName: "mini",
+                    syncLanguage: syncEnabled
+                )
+            ]
+        } else {
+            cores = []
+        }
+        return CoreProcessSnapshot(cores: cores, isAvailable: true)
+    }
+    func cores() -> [CoreProcess] { processSnapshot().cores }
     func current() -> CoreProcess? {
         processes.count == 1 ? processes[0] : nil
     }
@@ -58,4 +81,14 @@ final class MockProcessDiscovery: ProcessDiscovering {
 
 enum TestError: Error {
     case expected
+}
+
+struct ThrowingCommandRunner: CommandRunning {
+    func run(
+        executable: String,
+        arguments: [String],
+        standardInput: Data?
+    ) throws -> CommandResult {
+        throw TestError.expected
+    }
 }

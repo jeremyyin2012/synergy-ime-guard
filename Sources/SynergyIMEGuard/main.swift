@@ -83,6 +83,12 @@ private func makeRuntime(_ options: Options) throws -> (
         print("\(formatter.string(from: Date())) \(message)")
         fflush(stdout)
     }
+    let emitProcessError: (String) -> Void = { message in
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        fputs("\(formatter.string(from: Date())) \(message)\n", stderr)
+        fflush(stderr)
+    }
     let inputSource = MacOSInputSourceController()
     let stateStore = FileRestoreStateStore(url: URL(fileURLWithPath: statePath))
     let machine = GuardStateMachine(
@@ -91,7 +97,7 @@ private func makeRuntime(_ options: Options) throws -> (
         stateStore: stateStore,
         emit: emit
     )
-    let discovery = ProcessDiscovery()
+    let discovery = ProcessDiscovery(emit: emitProcessError)
     let runtime = GuardRuntime(
         logURL: URL(fileURLWithPath: logPath),
         screenName: screenName,
@@ -117,7 +123,9 @@ private func main() throws {
         print(GuardConstants.version)
     case "discover":
         let discovery = ProcessDiscovery()
-        guard let core = discovery.current() else {
+        let snapshot = discovery.processSnapshot()
+        guard snapshot.isAvailable, snapshot.cores.count == 1,
+              let core = snapshot.cores.first else {
             throw CLIError(message: "expected exactly one running synergy-core process")
         }
         try encode(core)
@@ -126,7 +134,11 @@ private func main() throws {
         guard inputSource.isAvailable(GuardConstants.abcInputSourceID) else {
             throw CLIError(message: "ABC input source is not available")
         }
-        guard !discovery.syncLanguageEnabled() else {
+        let snapshot = discovery.processSnapshot()
+        guard snapshot.isAvailable else {
+            throw CLIError(message: "could not inspect the running synergy-core process")
+        }
+        guard !snapshot.cores.contains(where: { $0.syncLanguage }) else {
             throw CLIError(message: "Synergy language sync is enabled; disable it before running the guard")
         }
         signal(SIGPIPE, SIG_IGN)
@@ -142,13 +154,14 @@ private func main() throws {
         runtime.run()
     case "check":
         let (runtime, machine, inputSource, discovery) = try makeRuntime(options)
-        let core = discovery.current()
+        let snapshot = discovery.processSnapshot()
+        let core = snapshot.cores.count == 1 ? snapshot.cores[0] : nil
         let screen = options.screenName!
         let report = DiagnosticReport(
             version: GuardConstants.version,
             role: core?.role,
             screenName: core?.screenName,
-            syncLanguage: discovery.syncLanguageEnabled(),
+            syncLanguage: snapshot.cores.contains { $0.syncLanguage },
             currentInputSourceID: SystemSelection(inputSource: inputSource).currentID(),
             abcAvailable: inputSource.isAvailable(GuardConstants.abcInputSourceID),
             savedInputSourceID: machine.savedInputSourceID(),

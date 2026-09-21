@@ -35,20 +35,35 @@ public struct ProcessCommandRunner: CommandRunning {
         let process = Process()
         let output = Pipe()
         let error = Pipe()
+        var input: Pipe?
+
+        defer {
+            try? output.fileHandleForReading.close()
+            try? output.fileHandleForWriting.close()
+            try? error.fileHandleForReading.close()
+            try? error.fileHandleForWriting.close()
+            try? input?.fileHandleForReading.close()
+            try? input?.fileHandleForWriting.close()
+        }
+
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
         process.standardOutput = output
         process.standardError = error
 
-        let input: Pipe?
         if standardInput != nil {
             input = Pipe()
             process.standardInput = input
-        } else {
-            input = nil
         }
 
         try process.run()
+
+        // Process duplicates the child-facing pipe ends during launch. Close
+        // the parent's copies immediately so every invocation has a bounded
+        // file-descriptor lifetime, including long-running health checks.
+        try? output.fileHandleForWriting.close()
+        try? error.fileHandleForWriting.close()
+        try? input?.fileHandleForReading.close()
 
         let outputData = LockedData()
         let errorData = LockedData()

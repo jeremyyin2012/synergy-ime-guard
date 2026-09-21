@@ -31,22 +31,25 @@ Windows、Linux 或 macOS。
 - 系统已启用 ABC 输入源
 - 已关闭 Synergy 的语言同步功能
 
-v0.1.0 已在 Synergy 3.6.3、macOS 26.5.1/26.5.2、Apple Silicon、简体中文
+v0.1.x 已在 Synergy 3.6.3、macOS 26.5.1/26.5.2、Apple Silicon、简体中文
 拼音、一台活动服务器 Mac 和一台被动客户端 Mac 的环境中完成实机验证；主从进程
 识别与角色门控另有自动化测试。Windows/Linux 属于 Synergy 支持的远端平台，也符合
-本工具的运行边界，但没有纳入 v0.1.0 的首发实机实验室，因此不会把它们标记成
+本工具的运行边界，但没有纳入实机实验室，因此不会把它们标记成
 “已实测”。Deskflow 暂不声明支持。
+
+v0.1.1 修复了进程探测子进程在长期运行时泄漏文件描述符的问题，同时减少后台进程
+快照次数，并把探测失败明确写入诊断日志。
 
 ## 安装
 
 下载压缩包与校验文件，核对 SHA-256 后，以当前登录用户安装。不要使用 `sudo`。
 
 ```bash
-curl -fLO https://github.com/jeremyyin2012/synergy-ime-guard/releases/download/v0.1.0/synergy-ime-guard-v0.1.0-macos-universal.tar.gz
-curl -fLO https://github.com/jeremyyin2012/synergy-ime-guard/releases/download/v0.1.0/synergy-ime-guard-v0.1.0-macos-universal.tar.gz.sha256
-shasum -a 256 -c synergy-ime-guard-v0.1.0-macos-universal.tar.gz.sha256
-tar -xzf synergy-ime-guard-v0.1.0-macos-universal.tar.gz
-cd synergy-ime-guard-v0.1.0-macos-universal
+curl -fLO https://github.com/jeremyyin2012/synergy-ime-guard/releases/download/v0.1.1/synergy-ime-guard-v0.1.1-macos-universal.tar.gz
+curl -fLO https://github.com/jeremyyin2012/synergy-ime-guard/releases/download/v0.1.1/synergy-ime-guard-v0.1.1-macos-universal.tar.gz.sha256
+shasum -a 256 -c synergy-ime-guard-v0.1.1-macos-universal.tar.gz.sha256
+tar -xzf synergy-ime-guard-v0.1.1-macos-universal.tar.gz
+cd synergy-ime-guard-v0.1.1-macos-universal
 ./install.sh
 ```
 
@@ -54,7 +57,7 @@ cd synergy-ime-guard-v0.1.0-macos-universal
 不存在，或二进制与当前 Mac 不兼容，安装器会停止。官方 Release 同时支持 Intel 和
 Apple Silicon；升级激活失败时会恢复上一版。
 
-v0.1.0 使用临时签名，尚未经过 Apple 公证；Release 提供的 SHA-256 文件是完整性
+Release 使用临时签名，尚未经过 Apple 公证；Release 提供的 SHA-256 文件是完整性
 校验依据。也可以自行从源码构建。
 
 ## 查看状态

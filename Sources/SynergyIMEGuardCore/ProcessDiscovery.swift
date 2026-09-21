@@ -12,7 +12,18 @@ public struct CoreProcess: Codable, Equatable {
     }
 }
 
+public struct CoreProcessSnapshot: Equatable {
+    public let cores: [CoreProcess]
+    public let isAvailable: Bool
+
+    public init(cores: [CoreProcess], isAvailable: Bool) {
+        self.cores = cores
+        self.isAvailable = isAvailable
+    }
+}
+
 public protocol ProcessDiscovering: AnyObject {
+    func processSnapshot() -> CoreProcessSnapshot
     func cores() -> [CoreProcess]
     func current() -> CoreProcess?
     func serverRunning(screenName: String) -> Bool
@@ -20,15 +31,39 @@ public protocol ProcessDiscovering: AnyObject {
 }
 
 public final class ProcessDiscovery: ProcessDiscovering {
-    private let snapshot: () -> String
+    private static let coreExpression = try! NSRegularExpression(
+        pattern: #"^(?:\S*/)?synergy-core\s+(server|client)(?:\s|$)"#
+    )
+    private let snapshot: () -> String?
 
-    public init(snapshot: (() -> String)? = nil) {
-        self.snapshot = snapshot ?? ProcessDiscovery.readProcessSnapshot
+    public init(
+        snapshot: (() -> String)? = nil,
+        commandRunner: CommandRunning = ProcessCommandRunner(),
+        emit: @escaping (String) -> Void = { _ in }
+    ) {
+        if let snapshot {
+            self.snapshot = { snapshot() }
+        } else {
+            self.snapshot = {
+                ProcessDiscovery.readProcessSnapshot(
+                    commandRunner: commandRunner,
+                    emit: emit
+                )
+            }
+        }
+    }
+
+    public func processSnapshot() -> CoreProcessSnapshot {
+        guard let contents = snapshot() else {
+            return CoreProcessSnapshot(cores: [], isAvailable: false)
+        }
+        let cores = contents.split(separator: "\n", omittingEmptySubsequences: true)
+            .compactMap { Self.parse(String($0)) }
+        return CoreProcessSnapshot(cores: cores, isAvailable: true)
     }
 
     public func cores() -> [CoreProcess] {
-        snapshot().split(separator: "\n", omittingEmptySubsequences: true)
-            .compactMap { Self.parse(String($0)) }
+        processSnapshot().cores
     }
 
     public func current() -> CoreProcess? {
@@ -47,22 +82,17 @@ public final class ProcessDiscovery: ProcessDiscovering {
     }
 
     static func parse(_ command: String) -> CoreProcess? {
-        guard command.range(
-            of: #"(?:^|/)synergy-core\s+(server|client)(?:\s|$)"#,
-            options: .regularExpression
-        ) != nil else {
+        let commandRange = NSRange(command.startIndex..., in: command)
+        guard
+            let match = coreExpression.firstMatch(
+                in: command,
+                range: commandRange
+            ),
+            let roleRange = Range(match.range(at: 1), in: command)
+        else {
             return nil
         }
-
-        let role: String
-        if command.range(
-            of: #"(?:^|/)synergy-core\s+server(?:\s|$)"#,
-            options: .regularExpression
-        ) != nil {
-            role = "server"
-        } else {
-            role = "client"
-        }
+        let role = String(command[roleRange])
 
         return CoreProcess(
             role: role,
@@ -115,17 +145,27 @@ public final class ProcessDiscovery: ProcessDiscovering {
         return nil
     }
 
-    private static func readProcessSnapshot() -> String {
+    private static func readProcessSnapshot(
+        commandRunner: CommandRunning,
+        emit: (String) -> Void
+    ) -> String? {
         do {
-            let result = try ProcessCommandRunner().run(
+            let result = try commandRunner.run(
                 executable: "/bin/ps",
                 arguments: ["-Ao", "command="],
                 standardInput: nil
             )
-            guard result.status == 0 else { return "" }
+            guard result.status == 0 else {
+                emit("process_snapshot_failed status=\(result.status)")
+                return nil
+            }
             return String(data: result.standardOutput, encoding: .utf8) ?? ""
         } catch {
-            return ""
+            emit(
+                "process_snapshot_failed error="
+                    + "\(type(of: error)):\(error.localizedDescription)"
+            )
+            return nil
         }
     }
 }

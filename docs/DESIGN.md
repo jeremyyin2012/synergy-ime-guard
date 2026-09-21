@@ -13,7 +13,7 @@ The upstream behavior is tracked by Deskflow issues
 [#9791](https://github.com/deskflow/deskflow/issues/9791), and
 [#9332](https://github.com/deskflow/deskflow/issues/9332).
 
-## v0.1.0 scope
+## Current scope
 
 Synergy IME Guard is a macOS-only, per-user LaunchAgent. It:
 
@@ -87,10 +87,16 @@ screen.
 | Language sync is enabled later | Restore any saved source and remain passive. |
 | Log is replaced or truncated | Reopen it and reconcile from the newest transition. |
 | Input source cannot be determined | Do not guess or destroy state. |
+| Process snapshot fails | Preserve state, write a diagnostic entry, and retry reconciliation. |
+
+The periodic recovery check runs only while a restore obligation exists. It
+uses one process snapshot every five seconds; normal cursor transitions remain
+log-driven and keep their existing low latency. All subprocess pipe handles are
+closed deterministically after each command.
 
 ## Compatibility boundary
 
-v0.1.0 is tested with:
+The v0.1.x line is tested with:
 
 - macOS 26.5.1 and 26.5.2
 - Synergy 3.6.3
@@ -119,7 +125,7 @@ removes only paths owned by this project.
 
 ## Release gates
 
-v0.1.0 requires:
+Each v0.1.x release requires:
 
 - All XCTest unit and state-machine tests passing on macOS.
 - Reproducible arm64 and x86_64 builds combined into one universal binary.

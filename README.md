@@ -35,11 +35,15 @@ endorsed by Symless. Synergy is a trademark of its respective owner.
 - The built-in ABC input source enabled
 - Synergy language synchronization disabled
 
-v0.1.0 has been physically tested with Synergy 3.6.3, macOS 26.5.1 and 26.5.2,
+The v0.1.x line has been physically tested with Synergy 3.6.3, macOS 26.5.1 and 26.5.2,
 Apple Silicon, Simplified Chinese Pinyin, and an active Mac server plus a passive
 Mac client. Server/client process discovery and role gating are covered by
 automated tests. Windows and Linux are supported by Synergy and are within the
-guard's remote-client boundary, but were not part of the v0.1.0 physical test lab.
+guard's remote-client boundary, but were not part of the physical test lab.
+
+v0.1.1 fixes a long-running file-descriptor leak in subprocess-based process
+discovery. It also reduces background process snapshots and makes discovery
+failures visible in the diagnostic log.
 
 Deskflow is not yet claimed as supported; its process and log contracts need a
 separate integration test.
@@ -50,11 +54,11 @@ Download both release files, verify the checksum, and install as the logged-in
 macOS user. Do not use `sudo`.
 
 ```bash
-curl -fLO https://github.com/jeremyyin2012/synergy-ime-guard/releases/download/v0.1.0/synergy-ime-guard-v0.1.0-macos-universal.tar.gz
-curl -fLO https://github.com/jeremyyin2012/synergy-ime-guard/releases/download/v0.1.0/synergy-ime-guard-v0.1.0-macos-universal.tar.gz.sha256
-shasum -a 256 -c synergy-ime-guard-v0.1.0-macos-universal.tar.gz.sha256
-tar -xzf synergy-ime-guard-v0.1.0-macos-universal.tar.gz
-cd synergy-ime-guard-v0.1.0-macos-universal
+curl -fLO https://github.com/jeremyyin2012/synergy-ime-guard/releases/download/v0.1.1/synergy-ime-guard-v0.1.1-macos-universal.tar.gz
+curl -fLO https://github.com/jeremyyin2012/synergy-ime-guard/releases/download/v0.1.1/synergy-ime-guard-v0.1.1-macos-universal.tar.gz.sha256
+shasum -a 256 -c synergy-ime-guard-v0.1.1-macos-universal.tar.gz.sha256
+tar -xzf synergy-ime-guard-v0.1.1-macos-universal.tar.gz
+cd synergy-ime-guard-v0.1.1-macos-universal
 ./install.sh
 ```
 

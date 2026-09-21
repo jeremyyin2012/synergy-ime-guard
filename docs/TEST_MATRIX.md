@@ -1,4 +1,4 @@
-# v0.1.0 test matrix
+# v0.1.x test matrix
 
 ## Input-source combinations
 
@@ -28,6 +28,12 @@
 - Log replacement and truncation
 - Missing log at startup
 - Sleep/wake followed by explicit cursor boundary crossing
+- Long remote dwell with stable file-descriptor count
+- Repeated process snapshots without descriptor growth
+- Process snapshot failure with an explicit diagnostic entry
+- Deferred reconciliation retry after a process snapshot failure
+- Unrelated commands that mention a full `synergy-core` path
+- One process snapshot per startup, leave, or pending-restore health decision
 
 ## Installation cases
 

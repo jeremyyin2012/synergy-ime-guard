@@ -22,7 +22,7 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
-          body_path: docs/releases/v0.1.0.md
+          body_path: docs/releases/${{ github.ref_name }}.md
           files: |
             dist/synergy-ime-guard-v*-macos-universal.tar.gz
             dist/synergy-ime-guard-v*-macos-universal.tar.gz.sha256
